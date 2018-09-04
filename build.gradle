@@ -1,0 +1,81 @@
+import java.nio.file.Paths
+
+buildscript {
+    ext {
+        artifactName    = "husky"
+        artifactVersion = "0.1.0"
+
+        kotlinVersion   = "1.2.51"
+        junitVersion    = "5.2.0"
+        detektVersion   = "1.0.0.RC8"
+        dokkaVersion    = "0.9.17"
+
+        distDir         = Paths.get("dist")
+        distLibDir      = distDir.resolve("lib")
+        libDir          = Paths.get("lib")
+    }
+
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+
+    dependencies {
+        classpath group: "org.jetbrains.kotlin"                     , name: "kotlin-gradle-plugin", version: kotlinVersion
+        classpath group: "gradle.plugin.io.gitlab.arturbosch.detekt", name: "detekt-gradle-plugin", version: detektVersion
+        classpath group: "org.jetbrains.dokka"                      , name: "dokka-gradle-plugin" , version: dokkaVersion
+    }
+}
+
+apply plugin: "org.jetbrains.kotlin.jvm"
+apply plugin: "jacoco"
+apply plugin: "io.gitlab.arturbosch.detekt"
+apply plugin: "org.jetbrains.dokka"
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlinVersion
+    implementation group: "org.jetbrains.kotlin", name: "kotlin-stdlib" , version: kotlinVersion
+
+    testImplementation group: "org.jetbrains.kotlin", name: "kotlin-test"         , version: kotlinVersion
+    testImplementation group: "org.jetbrains.kotlin", name: "kotlin-test-junit"   , version: kotlinVersion
+    testImplementation group: "org.junit.jupiter"   , name: "junit-jupiter-api"   , version: junitVersion
+    testRuntime        group: "org.junit.jupiter"   , name: "junit-jupiter-engine", version: junitVersion
+}
+
+check {
+    dependsOn detektCheck
+    dependsOn jacocoTestReport
+}
+
+clean {
+    delete distDir
+}
+
+detekt {
+    defaultProfile {
+        config = file("detekt.yml")
+    }
+}
+
+jar {
+    dependsOn dokka
+
+    baseName       = artifactName
+    version        = artifactVersion
+    destinationDir = file(distDir)
+
+    copy {
+        from configurations.runtimeClasspath
+        into distLibDir
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
